@@ -6,6 +6,7 @@ from typing import Tuple
 import librosa
 import pydub
 import numpy as np
+import pandas as pd
 from .exceptions import *
 
 
@@ -153,3 +154,31 @@ def audio_batch_generator(files: List[str], batch_size: int = 10) -> List[List]:
     batches = generate_file_batches(files, batch_size)
     for batch in batches:
         yield [load_audio_file(file) for file in batch]
+
+
+def export_dataframe(path: str, df: pd.DataFrame):
+    """
+    Exports a pandas `DataFrame` to a specified file path.
+
+    Args:
+    -----
+    - `path` (`str`): The file path to export the DataFrame to.
+    - `df` (`pd.DataFrame`): The pandas DataFrame to be exported.
+
+    Raises:
+    -------
+    - `ValueError`: If the file extension is not supported.
+    """
+    file_extension = os.path.splitext(path)[1]
+
+    export_functions = {
+        '.csv': df.to_csv,
+        '.xlsx': df.to_excel,
+        '.json': df.to_json
+    }
+
+    export_func = export_functions.get(file_extension)
+    if export_func:
+        export_func(path, index=False)
+    else:
+        raise ValueError(f"Unsupported file extension: {file_extension}")

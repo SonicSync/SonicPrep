@@ -1,6 +1,12 @@
+import os
+import random
 import numpy as np
+from faker import Faker
+import pandas as pd
 import pydub
 import soundfile as sf
+
+fake = Faker()
 
 
 def generate_random_audio(duration_sec, sample_rate, amplitude_db=None, frequency=440.0, silence_before=0.0, silence_after=0.0, entirely_silent=False):
@@ -52,6 +58,40 @@ def generate_random_audio(duration_sec, sample_rate, amplitude_db=None, frequenc
     return audio_data
 
 
+def get_data():
+    choices = ['a', 'b', 'c']
+    type = random.choice(choices)
+    if type == 'a':
+        return np.random.randn(1000)
+    elif type == 'b':
+        return random.randint(0, 1000)
+    elif type == 'c':
+        return fake.sentence()
+
+
+def generate_dataframe(r, c, data=True):
+    """
+    Generate a dataframe with random data.
+
+    Parameters:
+    - r (int): The number of rows in the dataframe.
+    - c (int): The number of columns in the dataframe.
+
+    Returns:
+    - df (DataFrame): The generated dataframe.
+
+    """
+    data = []
+    for _ in range(r):
+        dict = {}
+        if data:
+            for i in range(c):
+                dict[i] = str(get_data())
+        data.append(dict)
+    df = pd.DataFrame(data)
+    return df
+
+
 def save_audio(path, data, sr, format):
     if format == 'wav':
         sf.write(path, data, sr, subtype='PCM_24')
@@ -67,3 +107,14 @@ def save_audio(path, data, sr, format):
 def save_many_audio(data, sr):
     for audio, format, path in data:
         save_audio(path, audio, sr, format)
+
+
+def read_dataframe(path):
+    _, ext = os.path.splitext(path)
+    if ext == '.csv':
+        df = pd.read_csv(path)
+    if ext == '.xlsx':
+        df = pd.read_excel(path)
+    if ext == '.json':
+        df = pd.read_json(path)
+    return df

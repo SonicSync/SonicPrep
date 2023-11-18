@@ -1,4 +1,5 @@
 import numpy as np
+import pydub
 import soundfile as sf
 
 
@@ -55,7 +56,14 @@ def save_audio(path, data, sr, format):
     if format == 'wav':
         sf.write(path, data, sr, subtype='PCM_24')
     elif format == 'mp3':
-        sf.write(path, data, sr, format=format)
+        data = pydub.AudioSegment(
+            data.tobytes(), frame_rate=sr, sample_width=4, channels=2)
+        data.export(out_f=path, format="mp3")
     elif format == 'flac':
         sf.write(path, data, sr, format=format,
                  subtype='PCM_24')
+
+
+def save_many_audio(data, sr):
+    for audio, format, path in data:
+        save_audio(path, audio, sr, format)

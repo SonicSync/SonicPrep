@@ -8,6 +8,17 @@ class IOError(SonicPrepException):
         super().__init__(*args)
 
 
+class BatchReadError(IOError):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
+
+class NoFilesError(BatchReadError):
+
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
+
 class ReadAudioError(IOError):
     def __init__(self, *args: object) -> None:
         super().__init__(*args)

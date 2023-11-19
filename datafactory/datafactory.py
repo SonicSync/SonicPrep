@@ -5,6 +5,7 @@ from faker import Faker
 import pandas as pd
 import pydub
 import soundfile as sf
+from scipy.signal import butter, freqz
 
 fake = Faker()
 
@@ -56,6 +57,13 @@ def generate_random_audio(duration_sec, sample_rate, amplitude_db=None, frequenc
             audio_data *= target_amplitude / current_amplitude
 
     return audio_data
+
+
+def generate_audio_with_freqs(duration, sample_rate, low, high):
+    time = np.linspace(0, duration, int(duration * sample_rate))
+    array = (0.5 * np.sin(2 * np.pi * low * time) +
+             0.5 * np.sin(2 * np.pi * high * time))
+    return array
 
 
 def get_data():
@@ -118,3 +126,19 @@ def read_dataframe(path):
     if ext == '.json':
         df = pd.read_json(path)
     return df
+
+
+def generate_frequency_response(center_freq, bandwidth, order, sample_rate):
+    nyquist = 0.5 * sample_rate
+    normal_center_freq = center_freq / nyquist
+    normal_bandwidth = bandwidth / nyquist
+
+    # Calculate Butterworth filter coefficients
+    b, a = butter(order, [normal_center_freq - 0.5 * normal_bandwidth,
+                  normal_center_freq + 0.5 * normal_bandwidth], btype='band', analog=False)
+
+    # Frequency response
+    w, h = freqz(b, a, worN=8000)
+    magnitude = 20 * np.log10(np.abs(h))
+
+    return w, magnitude

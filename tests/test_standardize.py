@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import pyloudnorm as pyln
-from sonicprep.standardize import DynamicsNormalizer, trim
+from sonicprep.standardize import DynamicsNormalizer, trim, resample
 from sonicprep.utils import *
 from datafactory.datafactory import generate_random_audio
 
@@ -335,9 +335,88 @@ class TestTrim(unittest.TestCase):
         return calculate_array_duration(np.concatenate((pre, suf)))
 
 
-class StandardizeQuickSuite(unittest.TestSuite):
+class TestResample(unittest.TestCase):
+
+    def test_happy_path(self):
+        sample_rate = 48000
+        targe_sample_rate = 44100
+        audio_data = generate_random_audio(5, sample_rate)
+
+        result = resample(audio_data, sample_rate, targe_sample_rate)
+        result = calculate_sample_rate(result, 5)
+
+        self.assertEqual(result, targe_sample_rate)
+
+    def test_happy_path_no_change(self):
+        sample_rate = 44100
+        targe_sample_rate = 44100
+        audio_data = generate_random_audio(5, sample_rate)
+
+        result = resample(audio_data, sample_rate, targe_sample_rate)
+        result = calculate_sample_rate(result, 5)
+
+        self.assertEqual(result, targe_sample_rate)
+
+    def test_boundary_40k(self):
+        sample_rate = 44100
+        targe_sample_rate = 40000
+        audio_data = generate_random_audio(5, sample_rate)
+
+        result = resample(audio_data, sample_rate, targe_sample_rate)
+        result = calculate_sample_rate(result, 5)
+
+        self.assertEqual(result, targe_sample_rate)
+
+    def test_boundary_120k(self):
+        sample_rate = 44100
+        targe_sample_rate = 120000
+        audio_data = generate_random_audio(5, sample_rate)
+
+        result = resample(audio_data, sample_rate, targe_sample_rate)
+        result = calculate_sample_rate(result, 5)
+
+        self.assertEqual(result, targe_sample_rate)
+
+    def test_edge_case_high_original(self):
+        sample_rate = 441000
+        targe_sample_rate = 44100
+        audio_data = generate_random_audio(5, sample_rate)
+
+        result = resample(audio_data, sample_rate, targe_sample_rate)
+        result = calculate_sample_rate(result, 5)
+
+        self.assertEqual(result, targe_sample_rate)
+
+    def test_edge_case_low_original(self):
+        sample_rate = 4410
+        targe_sample_rate = 44100
+        audio_data = generate_random_audio(5, sample_rate)
+
+        result = resample(audio_data, sample_rate, targe_sample_rate)
+        result = calculate_sample_rate(result, 5)
+
+        self.assertEqual(result, targe_sample_rate)
+
+    def test_raises_too_low_target(self):
+        sample_rate = 44100
+        targe_sample_rate = 4000
+        audio_data = generate_random_audio(5, sample_rate)
+
+        with self.assertRaises(ValueError):
+            resample(audio_data, sample_rate, targe_sample_rate)
+
+    def test_raises_too_high_target(self):
+        sample_rate = 44100
+        targe_sample_rate = 120001
+        audio_data = generate_random_audio(5, sample_rate)
+
+        with self.assertRaises(ValueError):
+            resample(audio_data, sample_rate, targe_sample_rate)
+
+
+class NormalizeTestSuite(unittest.TestSuite):
     def __init__(self):
-        super(StandardizeQuickSuite, self).__init__()
+        super(NormalizeTestSuite, self).__init__()
         self.addTest(TestNormalizeDynamics("test_happy_path_rms"))
         self.addTest(TestNormalizeDynamics("test_happy_path_itu"))
         self.addTest(TestNormalizeDynamics("test_edge_case_zero_db"))
@@ -348,6 +427,10 @@ class StandardizeQuickSuite(unittest.TestSuite):
         self.addTest(TestNormalizeDynamics("test_raises_invalid_metric"))
         self.addTest(TestNormalizeDynamics("test_raises_positive_target"))
 
+
+class TrimTestSuite(unittest.TestSuite):
+    def __init__(self):
+        super(TrimTestSuite, self).__init__()
         self.addTest(TestTrim("test_happy_path"))
         self.addTest(TestTrim("test_edge_case_little_silence"))
         self.addTest(TestTrim("test_edge_case_all_silence"))
@@ -356,5 +439,39 @@ class StandardizeQuickSuite(unittest.TestSuite):
         self.addTest(TestTrim("test_edge_case_zero_threshold"))
 
 
+class ResampleTestSuite(unittest.TestSuite):
+    def __init__(self):
+        super(ResampleTestSuite, self).__init__()
+        self.addTest(TestResample("test_happy_path"))
+        self.addTest(TestResample("test_happy_path_no_change"))
+        self.addTest(TestResample("test_raises_too_high_target"))
+        self.addTest(TestResample("test_raises_too_low_target"))
+        self.addTest(TestResample("test_edge_case_high_original"))
+        self.addTest(TestResample("test_edge_case_low_original"))
+
+
+class StandardizeQuickSuite(unittest.TestSuite):
+    def __init__(self):
+        super(StandardizeQuickSuite, self).__init__()
+        # self.addTest(TestNormalizeDynamics("test_happy_path_rms"))
+        # self.addTest(TestNormalizeDynamics("test_happy_path_itu"))
+        # self.addTest(TestNormalizeDynamics("test_edge_case_zero_db"))
+        # self.addTest(TestNormalizeDynamics("test_edge_case_minus_100_db"))
+        # self.addTest(TestNormalizeDynamics("test_raises_empty_input"))
+        # self.addTest(TestNormalizeDynamics("test_raises_zero_input"))
+        # self.addTest(TestNormalizeDynamics("test_raises_inf_input"))
+        # self.addTest(TestNormalizeDynamics("test_raises_invalid_metric"))
+        # self.addTest(TestNormalizeDynamics("test_raises_positive_target"))
+
+        # self.addTest(TestTrim("test_happy_path"))
+        # self.addTest(TestTrim("test_edge_case_little_silence"))
+        # self.addTest(TestTrim("test_edge_case_all_silence"))
+        # self.addTest(TestTrim("test_raises_empty_audio"))
+        # self.addTest(TestTrim("test_edge_case_high_threshold"))
+        # self.addTest(TestTrim("test_edge_case_zero_threshold"))
+
+        self.addTest(TestResample("test_happy_path"))
+
+
 if __name__ == "__main__":
-    unittest.TextTestRunner().run(StandardizeQuickSuite())
+    unittest.TextTestRunner().run(ResampleTestSuite())

@@ -19,3 +19,9 @@ def calculate_array_duration_diff(array1, array2, sr):
 
 def calculate_array_len_diff(array1, array2):
     return len(array1) - len(array2)
+
+
+def calculate_sample_rate(audio_data, duration):
+    num_samples = len(audio_data)
+    sample_rate = num_samples / duration
+    return int(sample_rate)

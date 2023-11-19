@@ -11,7 +11,7 @@ from sonicprep.exceptions import AudioTypeError, NoFilesError
 from datafactory.datafactory import generate_random_audio, save_audio, save_many_audio, generate_dataframe, read_dataframe
 
 
-"""class TestLoadAudio(unittest.TestCase):
+class TestLoadAudio(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
         self.sr = 44100
@@ -316,7 +316,7 @@ class TestBatchLoadAudio(unittest.TestCase):
                 file_name = f'test{i}.{file_type}'
                 path = os.path.join(self.tempdir.name, file_name)
                 audio.append((audio_data, file_type, path))
-            save_many_audio(audio, self.sr)"""
+            save_many_audio(audio, self.sr)
 
 
 class TestExportDataFrame(unittest.TestCase):
@@ -374,7 +374,7 @@ class TestExportDataFrame(unittest.TestCase):
             export_dataframe(name, df)
 
 
-"""class IOTestSuite(unittest.TestSuite):
+class IOTestSuite(unittest.TestSuite):
     def __init__(self):
         super(IOTestSuite, self).__init__()
         self.addTest(TestLoadAudio('test_happy_path'))
@@ -385,7 +385,7 @@ class TestExportDataFrame(unittest.TestCase):
         self.addTest(TestBatchLoadAudio('test_happy_path_mix'))
         self.addTest(TestBatchLoadAudio('test_edge_case_all_silence'))
         self.addTest(TestBatchLoadAudio('test_edge_case_short_duration'))
-        self.addTest(TestBatchLoadAudio('test_raises_no_files_error'))"""
+        self.addTest(TestBatchLoadAudio('test_raises_no_files_error'))
 
 
 if __name__ == '__main__':

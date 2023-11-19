@@ -41,13 +41,13 @@ def generate_random_audio(duration_sec, sample_rate, amplitude_db=None, frequenc
                             (time_axis - silence_before))
 
         # Add random noise to the audio data
-        audio_data += np.random.normal(0, 0.5, audio_data.shape)
+        audio_data += np.random.normal(0, 1, audio_data.shape[0])
 
         # Apply silence at the beginning
-        audio_data[:int(silence_before * sample_rate)] = 0.0
+        # audio_data[:int(silence_before * sample_rate)] = 0.0
 
         # Apply silence at the end
-        audio_data[-int(silence_after * sample_rate):] = 0.0
+        # audio_data[-int(silence_after * sample_rate):] = 0.0
 
         # Adjust peak amplitude if specified
         if amplitude_db is not None:

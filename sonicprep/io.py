@@ -78,14 +78,12 @@ def load_audio_file(file_path: str, sr: int = 44100) -> Tuple[np.ndarray, int]:
     - `AudioTypeError`: If the file type is not supported.
     """
     validate_audio_type(file_path)
+    name = os.path.basename(file_path)
     try:
-        print('LOADING NON-MP3')
-        audio_data = librosa.load(file_path, sr=sr)
-        print('NON-MP3 SHAPE', audio_data[0].shape)
+        audio_data, sr = librosa.load(file_path, sr=sr)
     except AttributeError:
-        print('ATTRIBUTE ERROR')
-        audio_data = load_mp3_audio(file_path, sr=sr)
-    return audio_data
+        audio_data, sr = load_mp3_audio(file_path, sr=sr)
+    return name, audio_data, sr
 
 
 def find_all_files(dir: str, ext=['mp3', 'flac', 'wav']):
@@ -154,6 +152,11 @@ def audio_batch_generator(files: List[str], batch_size: int = 10) -> List[List]:
     batches = generate_file_batches(files, batch_size)
     for batch in batches:
         yield [load_audio_file(file) for file in batch]
+
+
+def create_dataframe(data):
+    data_dicts = [variation.__dict__() for variation in data]
+    return pd.DataFrame(data_dicts)
 
 
 def export_dataframe(path: str, df: pd.DataFrame):

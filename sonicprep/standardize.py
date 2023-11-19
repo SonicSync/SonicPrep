@@ -1,8 +1,10 @@
-from typing import List, Optional
+from typing import List
 from typing import Literal
 import numpy as np
 import librosa
 import pyloudnorm as pyln
+from .modules.filter import Filter
+from .models import Variation
 
 
 def resample(audio_data: np.ndarray, original_sr: int, target_sr: int) -> np.ndarray:
@@ -61,22 +63,22 @@ def trim(audio_data: np.ndarray, threshold: float = 0.01) -> np.ndarray:
 class DynamicsNormalizer:
     metrics = ['rms', 'itu']
 
-    def __init__(self, sr, target, metric: Literal['rms', 'itu'] = 'rms'):
+    def __init__(self, sr, target_lvl, metric: Literal['rms', 'itu'] = 'rms'):
         """
         Initializes a new instance of `DynamicsNormalizer`.
 
         Args:
         -----
         - `sr` (`int`): The sample rate of the audio.
-        - `target` (`str`): The target of the audio.
+        - `target_lvl` (`str`): The target of the audio.
         - `metric` (`Literal['rms', 'itu']`): The metric by which
         to normalize. rms normalizes the audio by the root mean
         square, and itu normalizes the audio by the integrated
         loudness. Defaults to `'rms'`.
         """
-        self._validate_init_args(metric, target)
+        self._validate_init_args(metric, target_lvl)
         self.sr = sr
-        self.target = target
+        self.target = target_lvl
         self.metric = metric
         self.meter = pyln.Meter(self.sr) if self.metric == "itu" else None
 
@@ -132,34 +134,34 @@ class DynamicsNormalizer:
 
 
 class AudioChunker:
-    def __init__(self, segment_duration: int = 30, sample_rate: int = 44100):
+    def __init__(self, duration: int = 30, sr: int = 44100):
         """
         Initializes a new instance of `AudioChunker`.
 
         Args:
         -----
-        - `segment_duration` (`int`): The duration of each
+        - `duration` (`int`): The duration of each
         segment in seconds. Defaults to 30.
-        - `sample_rate` (`int`): The sample rate in Hz. Defaults
+        - `sr` (`int`): The sample rate in Hz. Defaults
         to 44100.
 
         Raises:
         -------
-        - `ValueError`: If the segment_duration is less than or
+        - `ValueError`: If the duration is less than or
         equal to 0.
         """
-        self.segment_duration = segment_duration
-        self.sample_rate = sample_rate
+        self.duration = duration
+        self.sr = sr
 
-        if segment_duration <= 0:
-            raise ValueError('segment_duration must be greater than 0')
+        if duration <= 0:
+            raise ValueError('duration must be greater than 0')
 
     def chunk(self, audio_data: np.ndarray) -> List[np.ndarray]:
         """
         Splits an audio signal into smaller chunks.
 
         If the duration of the audio signal is not evenly
-        divisible by the `segment_duration`, the last chunk will
+        divisible by the `duration`, the last chunk will
         be shorter than the specified length.
 
         Args:
@@ -174,11 +176,11 @@ class AudioChunker:
         if not isinstance(audio_data, np.ndarray):
             raise ValueError('audio must be an instance of ndarray')
 
-        return self._chunk_audio(audio_data, self.sample_rate)
+        return self._chunk_audio(audio_data, self.sr)
 
     def _calculate_segments(self, audio_data, sample_rate):
-        segment_duration_seconds = self.segment_duration
-        samples_per_segment = sample_rate * segment_duration_seconds
+        duration_seconds = self.duration
+        samples_per_segment = sample_rate * duration_seconds
         num_segments, remaining_samples = divmod(
             len(audio_data), samples_per_segment)
         return num_segments, remaining_samples, int(samples_per_segment)

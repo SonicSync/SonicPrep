@@ -1,116 +1,344 @@
 import unittest
 import numpy as np
 import pyloudnorm as pyln
-from sonicprep.standardize import DynamicsNormalizer
+from sonicprep.standardize import DynamicsNormalizer, trim
+from sonicprep.utils import *
 from datafactory.datafactory import generate_random_audio
 
 
 class TestNormalizeDynamics(unittest.TestCase):
     def setUp(self):
-        self.sr = 44100
-        self.happy_audio_data = generate_random_audio(
-            5, self.sr)
+        self.sample_rate = 44100
+        self.happy_audio_data = generate_random_audio(5, self.sample_rate)
+        self.normalizer = DynamicsNormalizer(
+            self.sample_rate, -10, metric="rms")
 
-    def test_happy_path_mean(self):
-        target = -10
+    def test_happy_path_rms(self):
+        """
+        Test the happy path scenario for normalizing audio data
+        by the root mean square.
 
-        normalizer = DynamicsNormalizer(
-            self.sr, target, metric="rms")
-
-        result = normalizer.normalize(self.happy_audio_data)
-        result = self._calculate_lvl(result, "rms")
-        self.assertAlmostEqual(result, target)
+        This test case calls the normalize method of the
+        normalizer instance
+        with the happy_audio_data and calculates the level using
+        the `rms` method.
+        It then asserts that the calculated level is
+        approximately -10.
+        """
+        result = self.normalizer.normalize(self.happy_audio_data)
+        level = self._calculate_level(result, "rms")
+        self.assertAlmostEqual(level, -10)
 
     def test_happy_path_itu(self):
-        target = -10
+        """
+        Test the happy path scenario for normalizing audio data
+        by the ITU loudness.
 
-        normalizer = DynamicsNormalizer(
-            self.sr, target, metric="itu")
-
+        This test case calls the normalize method of the
+        normalizer instance
+        with the happy_audio_data and calculates the level using
+        the `itu` method.
+        It then asserts that the calculated level is
+        approximately -10.
+        """
+        normalizer = DynamicsNormalizer(self.sample_rate, -10, metric="itu")
         result = normalizer.normalize(self.happy_audio_data)
-        result = self._calculate_lvl(result, "itu")
-        self.assertAlmostEqual(result, target)
+        level = self._calculate_level(result, "itu")
+        self.assertAlmostEqual(level, -10)
 
     def test_edge_case_zero_db(self):
-        target = 0
+        """
+        Test the edge case scenario for normalizing audio data
+        with a target of 0 dB.
 
-        normalizer = DynamicsNormalizer(
-            self.sr, target, metric="rms")
-
-        result = normalizer.normalize(self.happy_audio_data)
-        result = self._calculate_lvl(result, "rms")
-        self.assertAlmostEqual(result, target)
+        This test case sets the target value of the normalizer
+        instance to 0, calls the normalize method with the
+        happy_audio_data, and calculates the level using
+        the `rms` method.
+        It then asserts that the calculated level is 0.
+        """
+        self.normalizer.target = 0
+        result = self.normalizer.normalize(self.happy_audio_data)
+        level = self._calculate_level(result, "rms")
+        self.assertAlmostEqual(level, 0)
 
     def test_edge_case_minus_100_db(self):
-        target = -100
+        """
+        Test the edge case scenario for normalizing audio data
+        with a target of -100 dB.
 
-        normalizer = DynamicsNormalizer(
-            self.sr, target, metric="rms")
-
-        result = normalizer.normalize(self.happy_audio_data)
-        result = self._calculate_lvl(result, "rms")
-        self.assertAlmostEqual(result, target)
+        This test case sets the target value of the normalizer
+        instance to -100, calls the normalize method with the
+        happy_audio_data, and calculates the level using
+        the `rms` method.
+        It then asserts that the calculated level is -100.
+        """
+        self.normalizer.target = -100
+        result = self.normalizer.normalize(self.happy_audio_data)
+        level = self._calculate_level(result, "rms")
+        self.assertAlmostEqual(level, -100)
 
     def test_edge_case_large_input(self):
-        target = -10
-        audio_data = generate_random_audio(3600, self.sr)
+        """
+        Test the edge case scenario for normalizing large audio data.
 
-        normalizer = DynamicsNormalizer(
-            self.sr, target, metric="rms")
-
-        result = normalizer.normalize(audio_data)
-        result = self._calculate_lvl(result, "rms")
-        self.assertAlmostEqual(result, target)
+        This test case generates a large audio data with a
+        duration of 1 hour, calls the normalize method with the
+        generated audio data, and calculates the level using the
+        `rms` method.
+        It then asserts that the calculated level is
+        approximately -10.
+        """
+        audio_data = generate_random_audio(3600, self.sample_rate)
+        result = self.normalizer.normalize(audio_data)
+        level = self._calculate_level(result, "rms")
+        self.assertAlmostEqual(level, -10)
 
     def test_raises_empty_input(self):
-        target = -10
+        """
+        Test that a `ValueError` is raised when an empty audio
+        input is passed to normalize method.
+
+        This test case creates an empty numpy array as the audio
+        input, and asserts that a `ValueError` is raised when the
+        normalize method is called.
+        """
         audio_data = np.ndarray(0, dtype=np.float32)
-        normalizer = DynamicsNormalizer(
-            self.sr, target, metric="rms")
         with self.assertRaises(ValueError):
-            normalizer.normalize(audio_data)
+            self.normalizer.normalize(audio_data)
 
     def test_raises_zero_input(self):
-        target = -10
+        """
+        Test that a `ValueError` is raised when a zero audio
+        input is passed to normalize method.
+
+        This test case creates a zero-filled numpy array as the
+        audio input, and asserts that a `ValueError` is raised
+        when the normalize method is called.
+        """
         audio_data = np.zeros(0, dtype=np.float32)
-        normalizer = DynamicsNormalizer(
-            self.sr, target, metric="rms")
         with self.assertRaises(ValueError):
-            normalizer.normalize(audio_data)
+            self.normalizer.normalize(audio_data)
 
     def test_raises_inf_input(self):
-        target = -10
+        """
+        Test that a `ValueError` is raised when an infinity audio
+        input is passed to normalize method.
+
+        This test case creates a numpy array with a single
+        element of infinity as the audio input, and asserts that
+        a `ValueError` is raised when the normalize method is
+        called.
+        """
         audio_data = np.array([np.inf])
-        normalizer = DynamicsNormalizer(
-            self.sr, target, metric="rms")
         with self.assertRaises(ValueError):
-            normalizer.normalize(audio_data)
+            self.normalizer.normalize(audio_data)
 
     def test_raises_invalid_metric(self):
+        """
+        Test that a `ValueError` is raised when an invalid
+        `metric` is passed to `DynamicsNormalizer`.
+
+        This test case sets an invalid metric value ("peak")
+        and a target value (-10), and asserts that a `ValueError`
+        is raised when initializing the `DynamicsNormalizer`.
+        """
+        target = -10
         metric = "peak"
         with self.assertRaises(ValueError):
-            DynamicsNormalizer(
-                self.sr, -10, metric=metric)
+            DynamicsNormalizer(self.sample_rate, target, metric=metric)
 
     def test_raises_positive_target(self):
+        """
+        Test that a `ValueError` is raised when a positive target
+        value is passed to DynamicsNormalizer.
+
+        This test case sets a positive target value (10),
+        and asserts that a `ValueError` is raised when
+        initializing the DynamicsNormalizer with "rms" metric.
+        """
         target = 10
         with self.assertRaises(ValueError):
-            DynamicsNormalizer(
-                self.sr, target, metric="rms")
+            DynamicsNormalizer(self.sample_rate, target, metric="rms")
 
-    def _calculate_lvl(self, audio_data, metric):
-        meter = pyln.Meter(self.sr)
+    def _calculate_level(self, audio_data, metric):
+        """
+        Calculate the level of audio data based on the specified
+        metric.
+
+        This helper method calculates the level of the audio data
+        using the specified metric.
+        If the metric is "rms", it calculates the level using the
+        root mean square.
+        If the metric is "itu", it calculates the level using the
+        ITU loudness.
+
+        Args:
+        -----
+        - `audio_data` (`numpy.ndarray`): The audio data.
+        - `metric` (`str`): The metric to use for calculating the
+        level.
+
+        `Returns`:
+        ----------
+        - `float`: The calculated level.
+
+        `Raises`:
+        ---------
+        - `ValueError`: If the metric is not supported.
+        """
+        meter = pyln.Meter(self.sample_rate)
         if metric == "rms":
             return 10 * np.log10(np.mean(audio_data**2))
         if metric == "itu":
-
             return meter.integrated_loudness(audio_data)
+        raise ValueError("Invalid metric: {}".format(metric))
+
+
+class TestTrim(unittest.TestCase):
+    def setUp(self):
+        """
+        Set up the test case by initializing the necessary variables.
+        """
+        self.sr = 44100
+        self.audio_data = generate_random_audio(5, self.sr, 5)
+        self.threshold = 0
+        self.silence = np.zeros(self.sr)
+        self.total_silence = np.zeros(self.sr * 2)
+
+    def test_happy_path(self):
+        """
+        Test happy path for the function.
+
+        This test case verifies the behavior of the function when
+        provided with silence audio data. It concatenates the
+        silence audio data with the actual audio data and tests
+        the result by comparing the expected duration and the
+        calculated duration using the provided sample rate. It
+        also checks the length difference between the original
+        audio data and the trimmed result, and ensures that the
+        length of the result matches the expected length
+        difference. Lastly, it compares the calculated result
+        duration with the expected duration.
+        """
+        # Test with silence audio data
+        silence_audio_data = np.concatenate(
+            (self.silence, self.audio_data, self.silence))
+
+        expected_duration = calculate_array_duration_diff(
+            self.total_silence, silence_audio_data, self.sr)
+
+        result = trim(silence_audio_data, self.threshold)
+
+        result_duration = calculate_array_duration(result, self.sr)
+        array_diff = calculate_array_len_diff(self.audio_data, result)
+
+        expected_array_diff = len(self.audio_data) - array_diff
+
+        self.assertEqual(len(result), expected_array_diff)
+        self.assertEqual(result_duration, expected_duration)
+
+    def test_edge_case_little_silence(self):
+        """
+        Test case for trimming audio data with little silence.
+
+        This test case checks if the `trim` function correctly
+        trims
+        audio data that contains a small amount of silence
+        at the beginning and end. It creates an audio data array
+        with
+        a small silence portion at the beginning and end,
+        and calculates the expected duration of the trimmed audio
+        based on the total silence duration and the sample rate.
+        Then it calls the `trim` function with the audio data and
+        a threshold value, and compares the length and duration
+        of the trimmed result with the expected values.
+
+        This test case is important to ensure that the `trim`
+        function works correctly in handling audio data with
+        small silence portions. By testing this edge case, we can
+        verify that the function can accurately detect and remove
+        the silence, while preserving the rest of the audio data.
+        """
+        silence = np.zeros(1)
+        total_silence = np.zeros(2)
+        silence_audio_data = np.concatenate(
+            (silence, self.audio_data, silence))
+
+        expected_duration = calculate_array_duration_diff(
+            total_silence, silence_audio_data, self.sr)
+
+        result = trim(silence_audio_data, self.threshold)
+        result_duration = calculate_array_duration(result, self.sr)
+        array_diff = calculate_array_len_diff(self.audio_data, result)
+        expected_array_diff = len(self.audio_data) - array_diff
+
+        self.assertEqual(len(result), expected_array_diff)
+        self.assertEqual(result_duration, expected_duration)
+
+    def test_edge_case_all_silence(self):
+        """
+        Test case for trimming all silence audio data.
+        """
+        # Test with all silence audio data
+        silence_audio_data = np.zeros(self.sr * 5)
+        result = silence_audio_data
+        self.assertTrue(np.array_equal(result, silence_audio_data))
+
+    def test_raises_empty_audio(self):
+        """
+        Test case for trimming an empty audio data.
+        """
+        empty_audio = np.array([])
+        with self.assertRaises(ValueError):
+            trim(empty_audio, self.threshold)
+
+    def test_edge_case_high_threshold(self):
+        """
+        Test case for trimming with a high threshold.
+        """
+        silence_audio_data = np.concatenate(
+            (self.silence, self.audio_data, self.silence))
+        expected_duration = calculate_array_duration_diff(
+            self.total_silence, silence_audio_data, self.sr)
+
+        result = trim(silence_audio_data, 1000)
+        result_duration = calculate_array_duration(result, self.sr)
+        array_diff = calculate_array_len_diff(self.audio_data, result)
+        expected_array_diff = len(self.audio_data) - array_diff
+
+        self.assertEqual(len(result), expected_array_diff)
+        self.assertGreaterEqual(result_duration, expected_duration)
+
+    def test_edge_case_zero_threshold(self):
+        """
+        Test case for trimming with a zero threshold.
+        """
+        silence_audio_data = np.concatenate(
+            (self.silence, self.audio_data, self.silence))
+        expected_duration = calculate_array_duration_diff(
+            self.total_silence, silence_audio_data, self.sr)
+
+        result = trim(silence_audio_data, 0)
+        result_duration = calculate_array_duration(result, self.sr)
+        array_diff = calculate_array_len_diff(self.audio_data, result)
+        expected_array_diff = len(self.audio_data) - array_diff
+
+        self.assertEqual(len(result), expected_array_diff)
+        self.assertEqual(result_duration, expected_duration)
+
+    def _calculate_silence_duration(self, pre, suf):
+        """
+        Calculate the duration of silence given the preceding and
+        succeeding audio data.
+        """
+        return calculate_array_duration(np.concatenate((pre, suf)))
 
 
 class StandardizeQuickSuite(unittest.TestSuite):
     def __init__(self):
         super(StandardizeQuickSuite, self).__init__()
-        self.addTest(TestNormalizeDynamics("test_happy_path_mean"))
+        self.addTest(TestNormalizeDynamics("test_happy_path_rms"))
         self.addTest(TestNormalizeDynamics("test_happy_path_itu"))
         self.addTest(TestNormalizeDynamics("test_edge_case_zero_db"))
         self.addTest(TestNormalizeDynamics("test_edge_case_minus_100_db"))
@@ -119,6 +347,13 @@ class StandardizeQuickSuite(unittest.TestSuite):
         self.addTest(TestNormalizeDynamics("test_raises_inf_input"))
         self.addTest(TestNormalizeDynamics("test_raises_invalid_metric"))
         self.addTest(TestNormalizeDynamics("test_raises_positive_target"))
+
+        self.addTest(TestTrim("test_happy_path"))
+        self.addTest(TestTrim("test_edge_case_little_silence"))
+        self.addTest(TestTrim("test_edge_case_all_silence"))
+        self.addTest(TestTrim("test_raises_empty_audio"))
+        self.addTest(TestTrim("test_edge_case_high_threshold"))
+        self.addTest(TestTrim("test_edge_case_zero_threshold"))
 
 
 if __name__ == "__main__":

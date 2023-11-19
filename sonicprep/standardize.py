@@ -1,3 +1,4 @@
+from typing import List, Optional
 from typing import Literal
 import numpy as np
 import librosa
@@ -128,3 +129,75 @@ class DynamicsNormalizer:
         if target > 0:
             raise ValueError(
                 "Invalid target: {}. Must be less than or equal to 0.".format(target))
+
+
+class AudioChunker:
+    def __init__(self, segment_duration: int = 30, sample_rate: int = 44100):
+        """
+        Initializes a new instance of `AudioChunker`.
+
+        Args:
+        -----
+        - `segment_duration` (`int`): The duration of each
+        segment in seconds. Defaults to 30.
+        - `sample_rate` (`int`): The sample rate in Hz. Defaults
+        to 44100.
+
+        Raises:
+        -------
+        - `ValueError`: If the segment_duration is less than or
+        equal to 0.
+        """
+        self.segment_duration = segment_duration
+        self.sample_rate = sample_rate
+
+        if segment_duration <= 0:
+            raise ValueError('segment_duration must be greater than 0')
+
+    def chunk(self, audio_data: np.ndarray) -> List[np.ndarray]:
+        """
+        Splits an audio signal into smaller chunks.
+
+        If the duration of the audio signal is not evenly
+        divisible by the `segment_duration`, the last chunk will
+        be shorter than the specified length.
+
+        Args:
+        -----
+        - `audio_data` (`np.ndarray`): The audio signal to be
+        chunked.
+
+        Returns:
+        --------
+        - `List[np.ndarray]`: A list of chunked audio signals.
+        """
+        if not isinstance(audio_data, np.ndarray):
+            raise ValueError('audio must be an instance of ndarray')
+
+        return self._chunk_audio(audio_data, self.sample_rate)
+
+    def _calculate_segments(self, audio_data, sample_rate):
+        segment_duration_seconds = self.segment_duration
+        samples_per_segment = sample_rate * segment_duration_seconds
+        num_segments, remaining_samples = divmod(
+            len(audio_data), samples_per_segment)
+        return num_segments, remaining_samples, int(samples_per_segment)
+
+    def _get_chunk(self, i, samples_per_segment, audio_data):
+        return audio_data[i * samples_per_segment: (i + 1) * samples_per_segment]
+
+    def _get_last_chunk(self, num_segments, samples_per_segment, remaining_samples, audio_data):
+        start_index = num_segments * samples_per_segment
+        end_index = start_index + remaining_samples
+        return audio_data[start_index:end_index]
+
+    def _chunk_audio(self, audio_data, sample_rate):
+        num_segments, remaining_samples, samples_per_segment = self._calculate_segments(
+            audio_data, sample_rate)
+
+        chunks = [self._get_chunk(i, samples_per_segment, audio_data)
+                  for i in range(num_segments)]
+        chunks.append(self._get_last_chunk(
+            num_segments, samples_per_segment, remaining_samples, audio_data)) if remaining_samples > 0 else None
+
+        return chunks

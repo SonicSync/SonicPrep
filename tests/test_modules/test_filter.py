@@ -1,26 +1,40 @@
 import unittest
-import numpy as np
-from sonicprep.modules.filter import Filter
-from sonicprep.utils import analyze_frequency
-from datafactory.datafactory import generate_audio_with_freqs, generate_frequency_response
+import scipy.signal as signal
+
+from sonicprep.modules import BandpassFilter, MultibandFilter, CustomMultibandFilter
 
 
-class TestFilter(unittest.TestCase):
+def mock_filter(mock_audio, low_cutoff, high_cutoff, sample_rate):
+    nyquist_freq = sample_rate * 0.5
+    low_normalized = low_cutoff / nyquist_freq
+    high_normalizer = high_cutoff / nyquist_freq
+    b, a = signal.butter(4, [low_normalized, high_normalizer], btype='band')
+    mock_filtered = signal.lfilter(b, a, mock_audio)
+    return mock_filtered
+
+
+class TestBandpassFilter(unittest.TestCase):
     def setUp(self):
-        self.sr = 44100
-        self.dur = 5
+        self.filter = BandpassFilter()
 
-    def test_happy_path(self):
-        pass
+    def tearDown(self) -> None:
+        self.filter = BandpassFilter()
 
-    def test_edge_case_broad_bandwidth(self):
-        pass
 
-    def test_edge_case_narrow_bandwidth(self):
-        pass
+class TestMultibandFilter(unittest.TestCase):
 
-    def test_raises_invalid_audio_data(self):
-        pass
+    def setUp(self):
+        self.filter = MultibandFilter()
+        self.sample_rate = 44100
+        self.min_freq = 20.0
+        self.max_freq = 20000.0
+        self.nyquist_freq = self.sample_rate * 0.5
+
+
+class TestCustomMultibandFilter(unittest.TestCase):
+
+    def setUp(self):
+        self.filter = CustomMultibandFilter()
 
 
 if __name__ == "__main__":

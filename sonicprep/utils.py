@@ -1,55 +1,66 @@
-
 import numpy as np
+from madmom.features import beats
+from madmom.audio.signal import Signal
 
 
-def calculate_array_duration(audio, sr):
-    num_samples = len(audio)
-    duration_sec = num_samples / sr
-    return int(duration_sec)
+class Calculator:
 
+    @staticmethod
+    def mean_power(audio_data):
+        return np.mean(audio_data**2)
 
-def calculate_array_duration_diff(array1, array2, sr):
-    array1_dur = calculate_array_duration(array1, sr)
-    array2_dur = calculate_array_duration(array2, sr)
-    if array1_dur > array2_dur:
-        return array1_dur - array2_dur
-    if array1_dur < array2_dur:
-        return array2_dur - array1_dur
-    return 0
+    @staticmethod
+    def peak_power(audio_data):
+        return np.max(audio_data**2)
 
+    @staticmethod
+    def mean_dB(audio_data):
+        return 10 * np.log10(Calculator.mean_power(audio_data))
 
-def calculate_array_len_diff(array1, array2):
-    return len(array1) - len(array2)
+    @staticmethod
+    def peak_dB(audio_data):
+        return 10 * np.log10(Calculator.peak_power(audio_data))
 
+    @staticmethod
+    def rms(audio_data):
+        return np.sqrt(Calculator.mean_power(audio_data))
 
-def calculate_sample_rate(audio_data, duration):
-    num_samples = len(audio_data)
-    sample_rate = num_samples / duration
-    return int(sample_rate)
+    @staticmethod
+    def duration(audio_data, sr):
+        return int(len(audio_data) / sr)
 
+    @staticmethod
+    def sample_rate(audio_data, duration):
+        return int(len(audio_data) / duration)
 
-def analyze_frequency(audio_array, sample_rate, high_freq, low_freq):
-    # Perform FFT
-    fft_result = np.fft.fft(audio_array)
-    # Use only positive frequencies
-    fft_result = np.abs(fft_result[:len(fft_result)//2])
+    @staticmethod
+    def duration_diff(audio_data1, audio_data2, sr):
+        duration1 = Calculator.duration(audio_data1, sr)
+        duration2 = Calculator.duration(audio_data2, sr)
+        if duration1 > duration2:
+            return duration1 - duration2
+        if duration1 < duration2:
+            return duration2 - duration1
+        return 0
 
-    # Calculate corresponding frequencies
-    frequencies = np.fft.fftfreq(len(fft_result), d=1/sample_rate)
-    positive_frequencies = frequencies[:len(frequencies)//2]
+    @staticmethod
+    def size_diff(audio_data1, audio_data2):
+        return len(audio_data1) - len(audio_data2)
 
-    # Check if certain frequencies are present (e.g., beyond 1000 Hz)
-    above = positive_frequencies[positive_frequencies >
-                                 high_freq]
-    below = positive_frequencies[positive_frequencies <
-                                 low_freq]
+    @staticmethod
+    def bpm(audio_data, sr):
+        autocorr = np.correlate(audio_data, audio_data, mode='full')
 
-    return above, below
+        # Keep only positive lags (ignoring negative lags)
+        autocorr = autocorr[len(autocorr)//2:]
 
+        # Find the index of the maximum value in the autocorrelation
+        peak_index = np.argmax(autocorr)
 
-def check_between_freqs(audio_array, sample_rate, high_freq, low_freq):
-    above, below = analyze_frequency(
-        audio_array, sample_rate, high_freq, low_freq)
-    above = bool(len(above) > 0)
-    below = bool(len(below) > 0)
-    return any([above, below])
+        # Convert the lag to time in seconds
+        lag_in_seconds = peak_index / sr
+
+        # Convert lag to BPM
+        tempo = 60 / lag_in_seconds
+
+        return tempo

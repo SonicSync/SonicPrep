@@ -59,6 +59,22 @@ def generate_random_audio(duration_sec, sample_rate, amplitude_db=None, frequenc
     return audio_data
 
 
+def generate_pulsing_audio(bpm, duration_seconds, sample_rate=44100):
+    # Calculate the period of one beat in seconds
+    beat_period = 60 / bpm
+
+    # Calculate the number of samples for the entire duration
+    num_samples = int(duration_seconds * sample_rate)
+
+    # Create a time array
+    t = np.linspace(0, duration_seconds, num_samples, endpoint=False)
+
+    # Generate a pulsing sine wave
+    audio = 0.5 * np.sin(2 * np.pi * t / beat_period)
+
+    return audio
+
+
 def generate_audio_with_freqs(duration, sample_rate, low, high):
     time = np.linspace(0, duration, int(duration * sample_rate))
     array = (0.5 * np.sin(2 * np.pi * low * time) +

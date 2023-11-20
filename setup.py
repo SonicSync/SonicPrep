@@ -7,8 +7,8 @@ setup(
     install_requires=[
         'pandas>=1.3.5',
         'librosa>=0.10.1',
-        'pyloudnorm>=0.1.1',
         'resampy>=0.4.2',
-        'samplerate>=0.1.0'
+        'samplerate>=0.1.0',
+        'git+https://github.com/CPJKU/madmom'
     ],
 )
